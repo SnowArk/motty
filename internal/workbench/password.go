@@ -31,12 +31,16 @@ func (state *State) preparePassword(session *Session) {
 	state.passwordBoxes = make([]flex.Box, len(questions))
 	state.passwordError = ""
 	state.offerToSave()
-	if passwordQuestionIndex(questions) < 0 {
+	passwordIndex := passwordQuestionIndex(questions)
+	if passwordIndex < 0 {
 		// Nothing here is the account password, so there is nothing worth
 		// saving under the password's name.
 		state.secrets.canSave = false
 	}
-	if session.attempt > 1 {
+	if session.attempt > 1 && passwordIndex >= 0 {
+		// A round with no password question is a later factor the server moved
+		// on to, so the attempt count growing does not mean the password was
+		// refused.
 		state.passwordError = state.messages.PasswordRetry
 		if state.forgetRefusedSecret(session, passwordSecretName(session.endpoint)) {
 			state.passwordError = state.messages.PasswordSavedRefused
