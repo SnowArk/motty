@@ -37,14 +37,18 @@ func (state *State) preparePassword(session *Session) {
 		// saving under the password's name.
 		state.secrets.canSave = false
 	}
-	if session.attempt > 1 && passwordIndex >= 0 {
-		// A round with no password question is a later factor the server moved
-		// on to, so the attempt count growing does not mean the password was
-		// refused.
+	switch {
+	case session.attempt > 1 && passwordIndex >= 0 && otpQuestionIndex(questions) < 0:
+		// Only a round that asks for the password alone can blame it. A round
+		// that still carries a one-time code may have refused either factor.
 		state.passwordError = state.messages.PasswordRetry
 		if state.forgetRefusedSecret(session, passwordSecretName(session.endpoint)) {
 			state.passwordError = state.messages.PasswordSavedRefused
 		}
+	case session.attempt > 1 && passwordIndex >= 0:
+		// A round that only asks for a later factor keeps the dialog quiet: the
+		// server moved on, and the password was not what it refused.
+		state.passwordError = state.messages.PasswordRetryFactor
 	}
 	state.passwordDescription = passwordDialogAddress(state, session)
 	state.prefillPasswordAnswers(session)

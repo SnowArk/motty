@@ -912,3 +912,26 @@ func TestMultiQuestionDialogFillsThePasswordAndTheCurrentCode(t *testing.T) {
 		t.Fatalf("code field = %q, want a six-digit code", code)
 	}
 }
+
+// A round that still asks for a one-time code must not claim the password was
+// refused: the server may have rejected either factor, and the saved password
+// has to survive.
+func TestARepeatedSecondFactorRoundDoesNotBlameThePassword(t *testing.T) {
+	world, options := newWorld(t)
+	state := newTestState(t, options)
+	fake := connect(t, state, world)
+	session := &state.sessions[0]
+	session.filledSecret = passwordSecretName(session.endpoint)
+	fake.set(func(status *sshconn.Status) {
+		status.Phase, status.Attempt = sshconn.PhasePasswordPrompt, 2
+		status.Questions = []sshconn.Question{{Secret: true, Text: "Password: "}, {Secret: true, Text: "Verification code: "}}
+		status.Endpoint = sshconn.Endpoint{Host: "prod.example.com", Port: 22, User: "deploy"}
+	})
+	state.Wake()
+	if state.modal != modalPassword || state.passwordError != state.messages.PasswordRetryFactor {
+		t.Fatalf("modal %d error %q", state.modal, state.passwordError)
+	}
+	if session.filledSecret == "" {
+		t.Fatal("a second-factor round forgot the saved password")
+	}
+}
