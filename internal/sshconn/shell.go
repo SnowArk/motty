@@ -77,9 +77,10 @@ func (conn *Conn) OpenShell(config ShellConfig) (*Shell, error) {
 		return nil, errors.New("sshconn: not connected")
 	}
 	command := config.Command
-	// The integration probe opens a channel of its own before the shell, and a
-	// restricted gateway would end the connection for it.
-	if command == "" && config.IntegrateShell && !restrictedGateway(conn.Status().ServerVersion) {
+	// The integration probe opens a command channel of its own before the
+	// shell, and a gateway that refuses a second channel ends the whole
+	// connection, so only an implementation the banner names is probed.
+	if command == "" && config.IntegrateShell && bannerSupportsCommandChannels(conn.Status().ServerVersion) {
 		command = conn.shellIntegrationCommand(config.IntegrationToken)
 	}
 	session, err := client.NewSession()

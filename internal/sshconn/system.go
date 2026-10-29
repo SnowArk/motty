@@ -87,11 +87,16 @@ var osReleaseIDs = map[string]RemoteSystem{
 
 const remoteSystemCommand = `printf 'kernel=%s\n' "$(uname -s 2>/dev/null)"; if [ -r /etc/os-release ]; then . /etc/os-release; printf 'id=%s\n' "$ID"; fi`
 
-// restrictedGateway reports whether the server's identification string names a
-// gateway that ends the whole connection when it is asked for a channel beyond
-// the one interactive shell. Such a server must never be probed.
-func restrictedGateway(banner string) bool {
-	return strings.Contains(strings.ToLower(banner), "bhostssh")
+// bannerSupportsCommandChannels reports whether the server's identification
+// string names an SSH implementation known to run command sessions beside an
+// interactive shell. A probe opens such a session, and a gateway that refuses
+// a second channel ends the whole connection, so an unrecognized banner is
+// never probed.
+func bannerSupportsCommandChannels(banner string) bool {
+	banner = strings.ToLower(banner)
+	return strings.Contains(banner, "openssh") ||
+		strings.Contains(banner, "dropbear") ||
+		strings.Contains(banner, "libssh")
 }
 
 // classifyBanner is what the server's identification string alone says. A

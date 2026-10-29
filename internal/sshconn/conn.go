@@ -537,7 +537,7 @@ func (conn *Conn) connect() error {
 		status.Method = method
 		status.System = classifyBanner(serverVersion)
 	})
-	if system := conn.Status().System; !restrictedGateway(serverVersion) &&
+	if system := conn.Status().System; bannerSupportsCommandChannels(serverVersion) &&
 		(system == SystemUnknown || system == SystemUbuntu || system == SystemDebian) {
 		go conn.detectSystem(client, serverVersion)
 	}
