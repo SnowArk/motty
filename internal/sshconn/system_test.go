@@ -36,6 +36,20 @@ func TestRemoteSystemClassification(t *testing.T) {
 	}
 }
 
+func TestRestrictedGatewayDetection(t *testing.T) {
+	for banner, want := range map[string]bool{
+		"SSH-2.0-BHostSSH_7.0":            true,
+		"SSH-2.0-bhostssh_7.0":            true,
+		"SSH-2.0-OpenSSH_9.6p1 Ubuntu":    false,
+		"SSH-2.0-OpenSSH_for_Windows_9.5": false,
+		"SSH-2.0-dropbear-ssh2022.83":     false,
+	} {
+		if got := restrictedGateway(banner); got != want {
+			t.Errorf("restrictedGateway(%q) = %v, want %v", banner, got, want)
+		}
+	}
+}
+
 func TestRemoteSystemPersistenceNamesRoundTrip(t *testing.T) {
 	for system := SystemUnknown; system <= SystemManjaro; system++ {
 		if got := ParseRemoteSystem(system.String()); got != system {

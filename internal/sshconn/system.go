@@ -87,6 +87,13 @@ var osReleaseIDs = map[string]RemoteSystem{
 
 const remoteSystemCommand = `printf 'kernel=%s\n' "$(uname -s 2>/dev/null)"; if [ -r /etc/os-release ]; then . /etc/os-release; printf 'id=%s\n' "$ID"; fi`
 
+// restrictedGateway reports whether the server's identification string names a
+// gateway that ends the whole connection when it is asked for a channel beyond
+// the one interactive shell. Such a server must never be probed.
+func restrictedGateway(banner string) bool {
+	return strings.Contains(strings.ToLower(banner), "bhostssh")
+}
+
 // classifyBanner is what the server's identification string alone says. A
 // distribution banner is only a first guess: derivatives share their parent's
 // OpenSSH, so a Linux guess is refined by asking the host.
