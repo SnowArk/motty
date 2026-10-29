@@ -508,6 +508,39 @@ func TestPasswordDialogMasksSubmitsOnEnterAndAsksAgainAfterARefusal(t *testing.T
 	}
 }
 
+func TestThePasswordDialogHintAndErrorLinesDoNotOverlap(t *testing.T) {
+	world, options := newWorld(t)
+	state := newTestState(t, options)
+	fake := connect(t, state, world)
+	askForPassword(state, fake, 2) // a refused password, with no vault to save into
+	state.secrets.canSave, state.secrets.needsMaster = false, false
+	if state.modal != modalPassword || state.passwordError == "" {
+		t.Fatalf("modal %d, error %q", state.modal, state.passwordError)
+	}
+
+	canvas, texts := paintedTexts(state)
+	if !contains(texts, state.messages.PasswordRetry) || !contains(texts, state.messages.PasswordHintUnsaved) {
+		t.Fatalf("the dialog does not show both lines: %v", texts)
+	}
+	var hint, problem ui.Rect
+	for _, text := range canvas.Texts() {
+		switch text.Value {
+		case state.messages.PasswordHintUnsaved:
+			hint = text.Bounds
+		case state.messages.PasswordRetry:
+			problem = text.Bounds
+		}
+	}
+	overlap := hint.Y < problem.Bottom() && problem.Y < hint.Bottom() &&
+		hint.X < problem.Right() && problem.X < hint.Right()
+	if overlap {
+		t.Fatalf("the hint line %v overlaps the error line %v", hint, problem)
+	}
+	if height := state.passwordBodyHeight(); height < 66+18+18 {
+		t.Fatalf("body height %v does not reserve the hint and error lines", height)
+	}
+}
+
 func TestEnterOutsideThePasswordFieldDoesNotSubmit(t *testing.T) {
 	world, options := newWorld(t)
 	state := newTestState(t, options)
